@@ -96,27 +96,27 @@ var (
 	}
 )
 
-func TestRoundTrip(t *testing.T) {
-	frags, err := Split(secret, questions, 2, 2<<10, 8, 1)
-	if err != nil {
-		t.Fatal(err)
+func TestSplitBadSssParams(t *testing.T) {
+	frags, err := Split(secret, questions, -1, 2<<10, 8, 1)
+	if err == nil {
+		t.Fatalf("Expected error but got %v", frags)
 	}
 
-	answers := make([]Answer, 2)
-	for i := range answers {
-		answers[i] = Answer{
-			Fragment: frags[i],
-			Answer:   questions[frags[i].Question],
-		}
+	expected := "sss: K must be > 1"
+	actual := err.Error()
+	if actual != expected {
+		t.Fatalf("Expected %v but was %v", expected, actual)
+	}
+}
+
+func TestSplitBadScryptParams(t *testing.T) {
+	frags, err := Split(secret, questions, 2, 7, 8, 1)
+	if err == nil {
+		t.Fatalf("Expected error but got %v", frags)
 	}
 
-	s, err := Recover(answers)
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	expected := string(s)
-	actual := string(secret)
+	expected := "scrypt: N must be > 1 and a power of 2"
+	actual := err.Error()
 	if actual != expected {
 		t.Fatalf("Expected %v but was %v", expected, actual)
 	}
