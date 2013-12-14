@@ -8,6 +8,8 @@
 //
 // To recover the secret given K of N answers, the secret keys are re-derived and
 // the shares are decrypted and combined.
+//
+// This package has not been audited by cryptography or security professionals.
 package horcrux
 
 import (
