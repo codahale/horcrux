@@ -50,8 +50,8 @@ func (f Fragment) String() string {
 // Answer is an encrypted fragment of the secret, plus the answer to the
 // security question.
 type Answer struct {
-	Fragment
-	Answer string // Answer is the answer to the security question.
+	Fragment        // Fragment is the previously-encrypted fragment.
+	Answer   string // Answer is the answer to the security question.
 }
 
 func (f Answer) String() string {
