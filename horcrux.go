@@ -38,7 +38,7 @@ type Fragment struct {
 
 	Question string // Question is the security question.
 	Nonce    []byte // Nonce is the random nonce used for encryption.
-	Salt     []byte // Salt is the random salted used for scrypt.
+	Salt     []byte // Salt is the random salt used for scrypt.
 	Value    []byte // Value is the encrypted share.
 }
 
