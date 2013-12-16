@@ -9,16 +9,14 @@ func TestFragmentStringer(t *testing.T) {
 	f := Fragment{
 		ID:       1,
 		N:        2,
-		R:        3,
-		P:        4,
-		K:        5,
+		K:        3,
 		Question: "Q",
 		Nonce:    []byte{10},
 		Salt:     []byte{11},
 		Value:    []byte{12},
 	}
 
-	expected := "1/5:Q:2:3:4:0b:0c"
+	expected := "1/3:Q:2:0b:0c"
 	actual := f.String()
 	if actual != expected {
 		t.Fatalf("Expected %v but was %v", expected, actual)
@@ -30,9 +28,7 @@ func TestAnswerStringer(t *testing.T) {
 		Fragment: Fragment{
 			ID:       1,
 			N:        2,
-			R:        3,
-			P:        4,
-			K:        5,
+			K:        3,
 			Question: "Q",
 			Nonce:    []byte{10},
 			Salt:     []byte{11},
@@ -41,7 +37,7 @@ func TestAnswerStringer(t *testing.T) {
 		Answer: "A",
 	}
 
-	expected := "1/5:Q:2:3:4:0b:0c:A"
+	expected := "1/3:Q:2:0b:0c:A"
 	actual := a.String()
 	if actual != expected {
 		t.Fatalf("Expected %v but was %v", expected, actual)
@@ -59,7 +55,7 @@ func Example() {
 
 	// Split into four fragments, any two of which can be combined to recover
 	// the secret.
-	frags, err := Split(secret, questions, 2, 2<<14, 8, 1)
+	frags, err := Split(secret, questions, 2, 2<<14)
 	if err != nil {
 		fmt.Println(err)
 		return
@@ -97,7 +93,7 @@ var (
 )
 
 func TestSplitBadSssParams(t *testing.T) {
-	frags, err := Split(secret, questions, -1, 2<<10, 8, 1)
+	frags, err := Split(secret, questions, -1, 2<<10)
 	if err == nil {
 		t.Fatalf("Expected error but got %v", frags)
 	}
@@ -109,21 +105,8 @@ func TestSplitBadSssParams(t *testing.T) {
 	}
 }
 
-func TestSplitBadScryptParams(t *testing.T) {
-	frags, err := Split(secret, questions, 2, 7, 8, 1)
-	if err == nil {
-		t.Fatalf("Expected error but got %v", frags)
-	}
-
-	expected := "scrypt: N must be > 1 and a power of 2"
-	actual := err.Error()
-	if actual != expected {
-		t.Fatalf("Expected %v but was %v", expected, actual)
-	}
-}
-
 func TestRecoverTooFewAnswers(t *testing.T) {
-	frags, err := Split(secret, questions, 2, 2<<10, 8, 1)
+	frags, err := Split(secret, questions, 2, 2<<10)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -149,7 +132,7 @@ func TestRecoverTooFewAnswers(t *testing.T) {
 }
 
 func TestRecoverBadAnswers(t *testing.T) {
-	frags, err := Split(secret, questions, 2, 2<<10, 8, 1)
+	frags, err := Split(secret, questions, 2, 2<<10)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -167,7 +150,7 @@ func TestRecoverBadAnswers(t *testing.T) {
 		t.Fatalf("Expected nil, but was %v", s)
 	}
 
-	expected := "chacha20poly1305: message authentication failed"
+	expected := "cipher: message authentication failed"
 	actual := err.Error()
 	if actual != expected {
 		t.Fatalf("Expected %v but was %v", expected, actual)

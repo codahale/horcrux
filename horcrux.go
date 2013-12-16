@@ -3,8 +3,8 @@
 //
 // Given N pairs of security questions and answers, the secret is split using
 // Shamir's Secret Sharing algorithm into N shares, one for each question. A
-// 256-bit key is derived from the answer to each question using scrypt, and the
-// share is then encrypted with that key using ChaCha20Poly1305.
+// 256-bit key is derived from the answer to each question using PBKDF2-SHA512,
+// and the share is then encrypted with that key using 256-bit AES-GCM.
 //
 // To recover the secret given K of N answers, the secret keys are re-derived and
 // the shares are decrypted and combined.
@@ -13,13 +13,14 @@
 package horcrux
 
 import (
+	"crypto/aes"
 	"crypto/rand"
+	"crypto/sha512"
 	"fmt"
 	"io"
 
-	"code.google.com/p/go.crypto/scrypt"
-	"github.com/codahale/chacha20"
-	"github.com/codahale/chacha20poly1305"
+	"crypto/cipher"
+	"code.google.com/p/go.crypto/pbkdf2"
 	"github.com/codahale/sss"
 )
 
@@ -32,19 +33,17 @@ const (
 type Fragment struct {
 	ID int // ID is a unique identifier for the fragment.
 	K  int // K is the number of fragments required to recover the secret.
-	N  int // N is the scrypt iteration parameter.
-	R  int // R is the scrypt memory parameter.
-	P  int // P is the scrypt parallelism parameter.
+	N  int // N is the PBKDF2 iteration parameter.
 
 	Question string // Question is the security question.
 	Nonce    []byte // Nonce is the random nonce used for encryption.
-	Salt     []byte // Salt is the random salt used for scrypt.
+	Salt     []byte // Salt is the random salt used for PBKDF2.
 	Value    []byte // Value is the encrypted share.
 }
 
 func (f Fragment) String() string {
-	return fmt.Sprintf("%d/%d:%s:%d:%d:%d:%x:%x",
-		f.ID, f.K, f.Question, f.N, f.R, f.P, f.Salt, f.Value)
+	return fmt.Sprintf("%d/%d:%s:%d:%x:%x",
+		f.ID, f.K, f.Question, f.N, f.Salt, f.Value)
 }
 
 // Answer is an encrypted fragment of the secret, plus the answer to the
@@ -60,11 +59,10 @@ func (f Answer) String() string {
 
 // Split splits the given secret into encrypted fragments based on the given
 // security questions. k is the number of fragments required to recover the
-// secret. n is the scrypt iteration parameter, and should be set fairly high
+// secret. n is the PBKDF2 iteration parameter, and should be set fairly high
 // due to the low entropy of most security question answers (recommended: 2<<14).
-// r is the scrypt memory parameter (recommended: 8). p is the scrypt parallelism
-// parameter (recommended: 1). Returns either a slice of fragments or an error.
-func Split(secret []byte, questions map[string]string, k, n, r, p int) ([]Fragment, error) {
+// Returns either a slice of fragments or an error.
+func Split(secret []byte, questions map[string]string, k, n int) ([]Fragment, error) {
 	shares, err := sss.Split(len(questions), k, secret)
 	if err != nil {
 		return nil, err
@@ -82,30 +80,26 @@ func Split(secret []byte, questions map[string]string, k, n, r, p int) ([]Fragme
 
 		frag := Fragment{
 			N:        n,
-			R:        r,
-			P:        p,
 			ID:       i,
 			K:        k,
 			Salt:     salt,
 			Question: q,
 		}
 
-		k, err := scrypt.Key([]byte(a), salt, frag.N, frag.R, frag.P, chacha20.KeySize)
+		k := pbkdf2.Key([]byte(a), salt, frag.N, 32, sha512.New)
+
+		block, err := aes.NewCipher(k)
 		if err != nil {
 			return nil, err
 		}
 
-		frag.Nonce = make([]byte, chacha20.NonceSize)
-		_, err = io.ReadFull(rand.Reader, frag.Nonce)
+		gcm, err := cipher.NewGCM(block)
 		if err != nil {
 			return nil, err
 		}
 
-		aead, err := chacha20poly1305.NewChaCha20Poly1305(k)
-		if err != nil {
-			return nil, err
-		}
-		frag.Value = aead.Seal(nil, frag.Nonce, shares[i], nil)
+		frag.Nonce = make([]byte, gcm.NonceSize())
+		frag.Value = gcm.Seal(nil, frag.Nonce, shares[i], nil)
 
 		f = append(f, frag)
 
@@ -127,18 +121,19 @@ func Recover(answers []Answer) ([]byte, error) {
 				a.K, len(answers))
 		}
 
-		k, err := scrypt.Key([]byte(a.Answer), a.Salt, a.N, a.R, a.P,
-			chacha20.KeySize)
+		k := pbkdf2.Key([]byte(a.Answer), a.Salt, a.N, 32, sha512.New)
+
+		block, err := aes.NewCipher(k)
 		if err != nil {
 			return nil, err
 		}
 
-		aead, err := chacha20poly1305.NewChaCha20Poly1305(k)
+		gcm, err := cipher.NewGCM(block)
 		if err != nil {
 			return nil, err
 		}
 
-		v, err := aead.Open(nil, a.Nonce, a.Value, nil)
+		v, err := gcm.Open(nil, a.Nonce, a.Value, nil)
 		if err != nil {
 			return nil, err
 		}
