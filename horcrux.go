@@ -95,16 +95,17 @@ func Split(secret []byte, questions map[string]string, k, n, r, p int) ([]Fragme
 			return nil, err
 		}
 
-		frag.Nonce = make([]byte, chacha20.NonceSize)
+		aead, err := chacha20poly1305.NewChaCha20Poly1305(k)
+		if err != nil {
+			return nil, err
+		}
+
+		frag.Nonce = make([]byte, aead.NonceSize())
 		_, err = io.ReadFull(rand.Reader, frag.Nonce)
 		if err != nil {
 			return nil, err
 		}
 
-		aead, err := chacha20poly1305.NewChaCha20Poly1305(k)
-		if err != nil {
-			return nil, err
-		}
 		frag.Value = aead.Seal(nil, frag.Nonce, shares[i], nil)
 
 		f = append(f, frag)
