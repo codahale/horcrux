@@ -95,7 +95,7 @@ func Split(secret []byte, questions map[string]string, k, n, r, p int) ([]Fragme
 			return nil, err
 		}
 
-		aead, err := chacha20poly1305.NewChaCha20Poly1305(k)
+		aead, err := chacha20poly1305.New(k)
 		if err != nil {
 			return nil, err
 		}
@@ -134,7 +134,7 @@ func Recover(answers []Answer) ([]byte, error) {
 			return nil, err
 		}
 
-		aead, err := chacha20poly1305.NewChaCha20Poly1305(k)
+		aead, err := chacha20poly1305.New(k)
 		if err != nil {
 			return nil, err
 		}

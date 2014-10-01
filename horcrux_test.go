@@ -167,7 +167,7 @@ func TestRecoverBadAnswers(t *testing.T) {
 		t.Fatalf("Expected nil, but was %v", s)
 	}
 
-	expected := "chacha20poly1305: message authentication failed"
+	expected := "message authentication failed"
 	actual := err.Error()
 	if actual != expected {
 		t.Fatalf("Expected %v but was %v", expected, actual)
