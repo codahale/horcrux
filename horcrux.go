@@ -30,11 +30,11 @@ const (
 // Fragment is an encrypted fragment of the secret associated with a security
 // question.
 type Fragment struct {
-	ID int // ID is a unique identifier for the fragment.
-	K  int // K is the number of fragments required to recover the secret.
-	N  int // N is the scrypt iteration parameter.
-	R  int // R is the scrypt memory parameter.
-	P  int // P is the scrypt parallelism parameter.
+	ID byte // ID is a unique identifier for the fragment.
+	K  int  // K is the number of fragments required to recover the secret.
+	N  int  // N is the scrypt iteration parameter.
+	R  int  // R is the scrypt memory parameter.
+	P  int  // P is the scrypt parallelism parameter.
 
 	Question string // Question is the security question.
 	Nonce    []byte // Nonce is the random nonce used for encryption.
@@ -65,14 +65,14 @@ func (f Answer) String() string {
 // r is the scrypt memory parameter (recommended: 8). p is the scrypt parallelism
 // parameter (recommended: 1). Returns either a slice of fragments or an error.
 func Split(secret []byte, questions map[string]string, k, n, r, p int) ([]Fragment, error) {
-	shares, err := sss.Split(len(questions), k, secret)
+	shares, err := sss.Split(byte(len(questions)), byte(k), secret)
 	if err != nil {
 		return nil, err
 	}
 
 	f := make([]Fragment, 0, len(questions))
 
-	i := 1
+	i := byte(1)
 	for q, a := range questions {
 		salt := make([]byte, saltLen)
 		_, err := io.ReadFull(rand.Reader, salt)
@@ -119,7 +119,7 @@ func Split(secret []byte, questions map[string]string, k, n, r, p int) ([]Fragme
 // Recover combines the given answers and returns the original secret or an
 // error.
 func Recover(answers []Answer) ([]byte, error) {
-	shares := make(map[int][]byte)
+	shares := make(map[byte][]byte)
 
 	for _, a := range answers {
 		if a.K > len(answers) {

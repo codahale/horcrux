@@ -97,12 +97,12 @@ var (
 )
 
 func TestSplitBadSssParams(t *testing.T) {
-	frags, err := Split(secret, questions, -1, 2<<10, 8, 1)
+	frags, err := Split(secret, questions, 1, 2<<10, 8, 1)
 	if err == nil {
 		t.Fatalf("Expected error but got %v", frags)
 	}
 
-	expected := "sss: K must be > 1"
+	expected := "K must be > 1"
 	actual := err.Error()
 	if actual != expected {
 		t.Fatalf("Expected %v but was %v", expected, actual)
