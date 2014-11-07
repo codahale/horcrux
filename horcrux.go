@@ -17,10 +17,10 @@ import (
 	"fmt"
 	"io"
 
-	"code.google.com/p/go.crypto/scrypt"
 	"github.com/codahale/chacha20"
 	"github.com/codahale/chacha20poly1305"
 	"github.com/codahale/sss"
+	"golang.org/x/crypto/scrypt"
 )
 
 const (
